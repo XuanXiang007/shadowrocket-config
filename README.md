@@ -6,7 +6,7 @@
 
 [查看配置](./whitelist.ini) · [订阅地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/whitelist.ini)
 
-- 分流：白名单模式；局域网、中国域名及中国 IP 直连，Google 和其余未命中流量走代理（`FINAL,PROXY`）。
+- 分流：白名单模式；局域网、Apple（含 iCloud）、中国域名及中国 IP 直连，Google 和其余未命中流量走代理（`FINAL,PROXY`）。Apple 规则优先匹配，iCloud 等服务不再默认走代理。
 - DNS：直连用腾讯 DNS；基础 DNS 为代理 Cloudflare DoH，备用为代理 Google DoH；关闭系统 DNS 回退。
 - 其他：阻断代理 QUIC、禁用 IPv6、UDP 不支持时拒绝。
 
