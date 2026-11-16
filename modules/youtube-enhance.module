@@ -1,4 +1,4 @@
-#!name=YouTube Clean (Shadowrocket)
+#!name=YouTube Enhance (Shadowrocket)
 #!desc=去广告/画中画/后台播放；隐私优先，不调用第三方 Worker；效果随 YouTube App 版本变化
 #!arguments=屏蔽上传按钮:false,屏蔽选段按钮:false,屏蔽Shorts按钮:false,字幕翻译语言:off,启用调试模式:false
 #!arguments-desc=屏蔽参数: true/false；翻译语言: off 或语言代码；播放异常时禁用模块并重试。

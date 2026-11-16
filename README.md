@@ -2,17 +2,17 @@
 
 个人自用，只保留一份主配置和一份 YouTube 模块，两者独立管理。
 
-## 主配置：sr.ini
+## 主配置：china-direct.ini（国内直连，其余代理）
 
-[查看配置](./sr.ini) · [订阅地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/sr.ini)
+[查看配置](./china-direct.ini) · [订阅地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/china-direct.ini)
 
 - 分流：局域网、中国域名及中国 IP 直连；Google 和其余流量代理。
 - DNS：直连用腾讯 DNS；基础 DNS 为代理 Cloudflare DoH，备用为代理 Google DoH；关闭系统 DNS 回退。
 - 其他：阻断代理 QUIC、禁用 IPv6、UDP 不支持时拒绝。
 
-## YouTube Clean 模块
+## YouTube Enhance 模块
 
-[查看模块](./modules/YouTube.Clean.module) · [导入地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/modules/YouTube.Clean.module)
+[查看模块](./modules/youtube-enhance.module) · [导入地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/modules/youtube-enhance.module)
 
 过滤部分广告及统计请求，尝试启用画中画和后台播放。效果依赖 YouTube 客户端版本；不能保证去除所有广告，部分中插广告和加密 UMP 未覆盖。
 
