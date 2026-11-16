@@ -2,11 +2,11 @@
 
 个人自用，只保留一份主配置和一份 YouTube 模块，两者独立管理。
 
-## 主配置：china-direct.ini（国内直连，其余代理）
+## 主配置：whitelist.ini（白名单模式）
 
-[查看配置](./china-direct.ini) · [订阅地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/china-direct.ini)
+[查看配置](./whitelist.ini) · [订阅地址](https://raw.githubusercontent.com/XuanXiang007/shadowrocket-config/main/whitelist.ini)
 
-- 分流：局域网、中国域名及中国 IP 直连；Google 和其余流量代理。
+- 分流：白名单模式；局域网、中国域名及中国 IP 直连，Google 和其余未命中流量走代理（`FINAL,PROXY`）。
 - DNS：直连用腾讯 DNS；基础 DNS 为代理 Cloudflare DoH，备用为代理 Google DoH；关闭系统 DNS 回退。
 - 其他：阻断代理 QUIC、禁用 IPv6、UDP 不支持时拒绝。
 
