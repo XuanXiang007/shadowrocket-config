@@ -1,0 +1,53 @@
+#!name=YouTube Max
+#!desc=YouTube / Music 强化去广告、画中画、后台播放；新增中插广告拦截
+#!author=Maasea (core scripts) / Community rules
+#!homepage=https://github.com/XuanXiang007/shadowrocket-config
+#!version=2026.11.18
+#!arguments=屏蔽上传按钮:false,屏蔽选段按钮:false,屏蔽Shorts按钮:false,字幕翻译语言:off,启用UMP第三方Worker:false,启用调试模式:false
+#!arguments-desc=布尔参数 true/false；字幕语言默认 off。启用UMP第三方Worker 会将部分加密播放请求和相关密钥信息交由 Maasea 的第三方 Worker 处理，可能扩大去广告覆盖，但有隐私风险；默认关闭。
+#
+# YouTube iOS App / YouTube Music: ad filtering + PiP + background playback.
+# Core: Maasea/sgmodule @ 65075cdb388fc5e3094afd7e7314c67b243f3525 (Apache-2.0)
+# https://github.com/Maasea/sgmodule
+# Request filters adapted from community YouTube modules (ddgksf2013, iFansClub).
+# IMPORTANT:
+# 1. Only enable ONE YouTube enhancement module at a time (disable youtube-enhance.module).
+# 2. Enable Shadowrocket HTTPS Decryption and trust its local CA certificate.
+# 3. player/ad_break blocking is an aggressive workaround for mid-roll ads. If playback
+#    freezes or stalls, disable this module and fall back to the original module.
+# 4. Avoid broad googlevideo.com / ctier=L blocking: it can break normal video streams.
+# 5. The UMP Worker is OFF by default; enabling it is an explicit privacy trade-off.
+
+[Rule]
+# Force YouTube's API and video transport to HTTPS/TCP for rewrite + MITM.
+AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,UDP)),REJECT
+AND,((DOMAIN,youtubei.googleapis.com),(PROTOCOL,UDP)),REJECT
+# YouTube-specific ad host; avoid blocking shared Google ad domains across other apps.
+DOMAIN,youtube-ads.l.google.com,REJECT
+
+[URL Rewrite]
+# Newly reported in-video mid-roll endpoint, missed by the upstream player script.
+^https?://(?:youtubei\.googleapis\.com|(?:www|m)\.youtube\.com)/youtubei/v\d+/player/ad_break(?:[?#]|$) _ reject-200
+
+# Advertising / impression / click telemetry; do not block general watch-time requests.
+^https?://(?:www|m|s)\.youtube\.com/api/stats/ads(?:[/?#]|$) _ reject-200
+^https?://(?:www|m|s)\.youtube\.com/(?:pagead|ptracking)(?:[/?#]|$) _ reject-200
+^https?://(?:www|m|s)\.youtube\.com/pcs/activeview(?:[/?#]|$) _ reject-200
+^https?://s\.youtube\.com/api/stats/qoe\?adcontext(?:[=&]|$) _ reject-200
+
+# Legacy Googlevideo ad endpoints. Preserve normal videoplayback and initplayback.
+^https?://[\w-]+\.googlevideo\.com/dclk_video_ads(?:[/?#]|$) _ reject-200
+^https?://[\w-]+\.googlevideo\.com/(?!(?:dclk_video_ads|videoplayback\?|initplayback\?)).+&oad(?:[=&]|$) _ reject-200
+
+[Script]
+# Maasea protobuf processor: homepage/search/player/Shorts ads, PiP, background audio.
+# Use only one response processor for these binary endpoints.
+youtube.max.response = type=http-response,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/(?:browse|next|player|search|reel/reel_watch_sequence|guide|account/get_setting|get_watch|log_event|config)(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.response.js,argument="{"captionLang":"{{{字幕翻译语言}}}","blockUpload":{{{屏蔽上传按钮}}},"blockImmersive":{{{屏蔽选段按钮}}},"blockShorts":{{{屏蔽Shorts按钮}}},"debug":{{{启用调试模式}}}}"
+
+# Optional UMP/Onesie encrypted-playback helper. Can redirect requests to a third party;
+# keep disabled unless the user explicitly accepts the associated privacy exposure.
+youtube.max.request.init = type=http-request,pattern=^https?://[\w-]+\.googlevideo\.com/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,argument="{"captionLang":"{{{字幕翻译语言}}}"}",enable={{{启用UMP第三方Worker}}}
+youtube.max.request.log_event = type=http-request,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/log_event(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,enable={{{启用UMP第三方Worker}}}
+
+[MITM]
+hostname = %APPEND% -redirector*.googlevideo.com, *.googlevideo.com, youtubei.googleapis.com, www.youtube.com, m.youtube.com, s.youtube.com
