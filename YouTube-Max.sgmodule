@@ -2,7 +2,9 @@
 #!desc=仅 YouTube/YouTube Music 去广告与后台播放；独立模块，不改动主配置
 #!author=Based on Maasea/sgmodule and community Shadowrocket rules
 #!homepage=https://github.com/Maasea/sgmodule
-#!version=2026.11.18
+#!version=2026.11.18.1
+#!arguments=启用UMPWorker:true
+#!arguments-desc=启用UMPWorker：true 开启新式 UMP/Onesie Worker 处理（可能将播放 URL 与密钥参数发送至第三方服务）；false 关闭 Worker 请求链路，保留其余去广告功能。
 
 # 仅处理 YouTube 相关流量。不包含字幕翻译、隐藏按钮、会员状态伪装等功能。
 # 使用前须在 Shadowrocket 中启用 HTTPS 解密，安装并信任本机 CA 证书。
@@ -27,13 +29,13 @@ AND,((DOMAIN,youtubei.googleapis.com),(PROTOCOL,UDP)),REJECT
 ^https?:\/\/s\.youtube\.com\/api\/stats\/qoe\?adcontext(?:=|&|$) _ reject-200
 
 [Script]
-# Maasea 的 Protobuf 响应脚本：视频/信息流广告清理及后台播放能力。
+# 固定 Maasea 2026-07-19 提交版本：视频/信息流广告清理及后台播放。
 # 附加功能参数全部关闭，避免改变 Shorts、按钮和字幕行为。
-youtube.response = type=http-response,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.response.js,argument="{"captionLang":"off","blockUpload":false,"blockImmersive":false,"blockShorts":false,"debug":false}"
+youtube.response = type=http-response,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.response.js,argument="{"captionLang":"off","blockUpload":false,"blockImmersive":false,"blockShorts":false,"debug":false}"
 
-# 适配新加密 Onesie/UMP 播放链路；不可与旧 initplayback Map Local 混用。
-youtube.request.init = type=http-request,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.request.js,argument="{"captionLang":"off"}"
-youtube.request.log_event = type=http-request,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event(?:\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.request.js
+# 两条请求脚本共用「启用UMPWorker」开关：关闭时不触发第三方 Worker 链路。不可与旧 initplayback Map Local 混用。
+youtube.request.init = type=http-request,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,argument="{"captionLang":"off"}",enable={{{启用UMPWorker}}}
+youtube.request.log_event = type=http-request,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event(?:\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,enable={{{启用UMPWorker}}}
 
 [MITM]
 hostname = %APPEND% -redirector*.googlevideo.com, *.googlevideo.com, youtubei.googleapis.com, www.youtube.com, s.youtube.com
