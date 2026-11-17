@@ -1,38 +1,27 @@
-#!name=YouTube Enhance Pro (Shadowrocket)
-#!desc=YouTube/YouTube Music 去广告、画中画、后台播放；默认本地处理，UMP Worker 可选开启
+#!name=YouTube Enhance
+#!desc=YouTube / Music 去广告、画中画、后台播放；UMP Worker 可选
 #!arguments=屏蔽上传按钮:false,屏蔽选段按钮:false,屏蔽Shorts按钮:false,字幕翻译语言:off,启用UMP第三方Worker:false,启用调试模式:false
-#!arguments-desc=默认不通过 UMP 请求脚本转发至第三方 Worker；手动开启后，加密 initplayback 请求可能重定向到 Maasea Worker。其它屏蔽参数 true/false；字幕语言 off 或 zh-Hans；仅排障时启用调试。
-# v2.1 / 2026-11-17 | 本地去广告优先，UMP Worker 明确选择，避免未经验证的强制中插拦截
-# 上游脚本：Maasea/sgmodule，固定提交 65075cdb388fc5e3094afd7e7314c67b243f3525（Apache-2.0）
-# 默认关闭可能重定向至第三方 Worker 的 initplayback 请求脚本；开启时可能向第三方传递客户端密钥信息及原始请求 URL。
-# 第三方服务：https://init-stream.maasea.workers.dev/；固定脚本版本不代表第三方处理可审计。
-# 需开启 Shadowrocket HTTPS 解密并信任本机 CA，建议开启 HTTP/2 MITM；勿与其他 YouTube 模块叠加。
-# 无法保证所有 YouTube App 版本 100% 去广告。未进行最新 App 实机验证。
+#!arguments-desc=开关 true/false；字幕语言 off 或语言代码；UMP Worker 默认关闭，开启会增加第三方隐私风险。
+# Maasea/sgmodule @ 65075cdb388fc5e3094afd7e7314c67b243f3525 (Apache-2.0)
+# 需开启 HTTPS 解密；勿与其他 YouTube 模块叠加。
 
 [Rule]
-# 对指定域名禁用 QUIC/UDP，促使流量回落至可 HTTPS 解密的 TCP。
 AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,UDP)),REJECT
 AND,((DOMAIN,youtubei.googleapis.com),(PROTOCOL,UDP)),REJECT
 
 [URL Rewrite]
-# player/ad_break 中插接口已见社区反馈，但直接拒绝未证实安全，故不启用实验性硬拦截。
-# 参考：https://github.com/Maasea/sgmodule/issues/110
-
-# 过滤已识别的广告上报请求；仅清理上报不等于完全去除视频广告。
+# 过滤广告上报与旧式资源，不拦截正常视频请求。
 ^https?://(?:www|s)\.youtube\.com/api/stats/ads(?:[?#]|$) _ reject-200
 ^https?://(?:www|s)\.youtube\.com/(?:pagead|ptracking)(?:[/?#]|$) _ reject-200
 ^https?://s\.youtube\.com/api/stats/qoe\?adcontext(?:=|&|$) _ reject-200
-
-# 旧式广告资源；明确避开 videoplayback / initplayback，避免破坏正常视频和 UMP 链路。
 ^https?://[\w-]+\.googlevideo\.com/(?!(?:dclk_video_ads|videoplayback\?|initplayback\?)).+&oad(?:[=&]|$) _ reject-200
 
 [Script]
-# browse/next/search/Shorts/player：去广告及 PIP/后台播放；config/log_event：存储 UMP 配置。
+# 广告处理、画中画及后台播放
 youtube.clean.response = type=http-response,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/(?:browse|next|player|search|reel/reel_watch_sequence|guide|account/get_setting|get_watch|log_event|config)(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.response.js,argument="{"captionLang":"{{{字幕翻译语言}}}","blockUpload":{{{屏蔽上传按钮}}},"blockImmersive":{{{屏蔽选段按钮}}},"blockShorts":{{{屏蔽Shorts按钮}}},"debug":{{{启用调试模式}}}}"
 
-# Onesie/UMP 加密播放请求：仅主动开启 Worker 开关时执行，默认不向第三方转发。
+# UMP Worker：默认关闭，开启可能向第三方发送播放密钥信息及目标 URL。
 youtube.clean.request.init = type=http-request,pattern=^https?://[\w-]+\.googlevideo\.com/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,argument="{"captionLang":"{{{字幕翻译语言}}}"}",enable={{{启用UMP第三方Worker}}}
-# UMP 请求头同步：同样仅在用户选择第三方 UMP 增强时启用，默认避免额外请求改写。
 youtube.clean.request.log_event = type=http-request,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/log_event(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,enable={{{启用UMP第三方Worker}}}
 
 [MITM]
