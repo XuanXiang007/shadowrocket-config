@@ -59,19 +59,25 @@
 | 字段 | 作用 |
 | --- | --- |
 | `#!name` | 模块显示名称：`YouTube Enhance`。 |
-| `#!desc` | 功能摘要，说明去广告、后台播放和可选 Worker。 |
+| `#!desc` | 功能摘要，说明去广告、后台播放与可配置的附加功能。 |
 | `#!author` | 标注使用的上游实现与社区规则来源。 |
 | `#!homepage` | 关联 Maasea 上游仓库。 |
 | `#!version` | 当前模块配置版本，不代表上游脚本构建日期。 |
-| `#!arguments` | 定义可编辑参数 `EnableUMPWorker`，默认 `true`。 |
-| `#!arguments-desc` | 在编辑参数界面解释开关的作用与取舍。 |
+| `#!arguments` | 定义六个可编辑参数及其默认值；布尔参数使用 `true` / `false`，字幕翻译使用语言代码。 |
+| `#!arguments-desc` | 在模块编辑参数界面逐项说明各参数的效果与可填写值。 |
 
-在 Shadowrocket 中进入「配置 → 模块 → YouTube Enhance → 编辑参数」，设置 `EnableUMPWorker`。
+进入 Shadowrocket「配置 → 模块 → YouTube Enhance → 编辑参数」即可调整。默认值保持原先使用行为，不强制隐藏界面按钮，也不自动开启字幕翻译与调试；**这些功能现在都能自行选择**。
 
-| 取值 | 效果 |
-| --- | --- |
-| `true`（默认） | 启用 `initplayback` 与 `log_event` 请求脚本，新式 UMP/Onesie 处理可能使用第三方 Worker。 |
-| `false` | 停用上述两条请求脚本，保留响应去广告、URL Rewrite、UDP 规则和 MITM；部分新式广告可能重新出现。 |
+| 参数 | 默认值 | 修改后的效果 |
+| --- | --- | --- |
+| `EnableUMPWorker` | `true` | `true` 启用 `initplayback` 和 `log_event` 请求脚本，可能使用第三方 Worker；`false` 停用两条请求脚本，其他去广告规则仍有效。 |
+| `BlockUpload` | `false` | `true` 尝试隐藏上传按钮；`false` 保留原始入口。 |
+| `BlockImmersive` | `false` | `true` 尝试隐藏选段或沉浸式入口；`false` 保留原始入口。 |
+| `BlockShorts` | `false` | `true` 尝试隐藏 Shorts 入口；`false` 保留 Shorts。此项不是 Shorts 广告过滤开关。 |
+| `CaptionLang` | `off` | `off` 不自动翻译字幕；填写 `zh-Hans`、`zh-Hant`、`en`、`ja` 等语言代码可请求对应字幕翻译。它是文本参数，不是布尔开关。 |
+| `Debug` | `false` | `true` 启用上游脚本的调试日志；`false` 保持安静。 |
+
+**注意：** 这些选项控制 Maasea 脚本的附加行为，实际效果取决于上游脚本、YouTube App 版本及是否匹配到相应请求。修改 `CaptionLang` 时，响应脚本和 UMP 请求脚本会使用同一个目标语言；仅打开 `BlockShorts` 不代表关闭 Shorts 视频广告过滤。
 
 ### Rule 与 URL Rewrite 字段
 
@@ -100,7 +106,7 @@
 | `max-size=-1` | 不通过此字段限制交给脚本的正文大小。 |
 | `binary-body-mode=1` | 二进制正文模式，用于处理 Protobuf。 |
 | `script-path` | 从 Maasea `master` 分支获取请求/响应 JavaScript。 |
-| `argument` | 传入脚本选项：`captionLang=off` 不翻译；`blockUpload=false`、`blockImmersive=false`、`blockShorts=false` 不隐藏对应入口；`debug=false` 不开启调试。 |
+| `argument` | 将模块参数传给 Maasea：`captionLang` 接收 `CaptionLang`；`blockUpload`、`blockImmersive`、`blockShorts`、`debug` 分别使用对应布尔参数。响应脚本读取全部五项，`initplayback` 请求脚本共用 `CaptionLang`。 |
 | `enable={{{EnableUMPWorker}}}` | 将模块开关传给两条请求脚本；关闭时不运行这两条脚本。 |
 | `hostname = %APPEND%` | 将 YouTube API、视频、广告请求主机追加到现有 MITM 清单，而非覆盖原清单。 |
 | `-redirector*.googlevideo.com` | 将重定向类视频主机排除在 MITM 清单之外。 |
