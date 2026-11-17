@@ -1,27 +1,40 @@
-#!name=YouTube Enhance (Shadowrocket)
-#!desc=去广告/画中画/后台播放；隐私优先，不调用第三方 Worker；效果随 YouTube App 版本变化
+#!name=YouTube Enhance Pro (Shadowrocket)
+#!desc=YouTube/YouTube Music 去广告、画中画、后台播放；包含 UMP 加密播放处理（使用 Maasea Worker）
 #!arguments=屏蔽上传按钮:false,屏蔽选段按钮:false,屏蔽Shorts按钮:false,字幕翻译语言:off,启用调试模式:false
-#!arguments-desc=屏蔽参数: true/false；翻译语言: off 或语言代码；播放异常时禁用模块并重试。
-# v1.0；Maasea 响应脚本（Apache-2.0），锁定版本
-# 需启用 HTTPS 解密和信任本机 CA；不加载 request 脚本
-# 部分 UMP / 中插广告可能无法去除
+#!arguments-desc=屏蔽参数：true/false；字幕翻译：off 或语言代码（如 zh-Hans）；调试仅在排错时开启。
+# v2.0 / 2026-11-17 | 目标：尽可能兼顾广告覆盖率与正常播放
+# 上游脚本：Maasea/sgmodule，固定提交 65075cdb388fc5e3094afd7e7314c67b243f3525（Apache-2.0）
+# 注意：请求脚本在某些加密 Onesie/UMP 播放场景会把 initplayback 重定向至
+# https://init-stream.maasea.workers.dev/；该方案不是纯本地处理，须自行评估隐私风险。
+# 需开启 Shadowrocket HTTPS 解密并信任本机 CA；勿与其他 YouTube 模块叠加。
+# 无法保证所有 YouTube App 版本 100% 去广告。未进行最新 App 实机验证。
+
 [Rule]
-# 阻断相关 QUIC，便于 HTTPS 解密
+# 对指定域名禁用 QUIC/UDP，促使流量回落至可 HTTPS 解密的 TCP。
 AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,UDP)),REJECT
 AND,((DOMAIN,youtubei.googleapis.com),(PROTOCOL,UDP)),REJECT
 
 [URL Rewrite]
-# 拒绝部分广告统计请求
+# 新式中插广告：阻断独立 player/ad_break 请求；若出现卡播放，请先移除这一行排查。
+# 此为社区采用的兼容性方案，尚无针对最新 Shadowrocket + YouTube 的全面实测。
+^https?://youtubei\.googleapis\.com/youtubei/v[0-9]+/player/ad_break(?:[?#]|$) _ reject
+
+# 过滤已识别的广告上报请求；仅清理上报不等于完全去除视频广告。
 ^https?://(?:www|s)\.youtube\.com/api/stats/ads(?:[?#]|$) _ reject-200
 ^https?://(?:www|s)\.youtube\.com/(?:pagead|ptracking)(?:[/?#]|$) _ reject-200
 ^https?://s\.youtube\.com/api/stats/qoe\?adcontext(?:=|&|$) _ reject-200
-# 拦截旧广告资源，保留正常视频流
-^https?://[\w-]+\.googlevideo\.com/(?!(?:dclk_video_ads|videoplayback\?)).+&oad(?:[=&]|$) _ reject-200
+
+# 旧式广告资源；明确避开 videoplayback / initplayback，避免破坏正常视频和 UMP 链路。
+^https?://[\w-]+\.googlevideo\.com/(?!(?:dclk_video_ads|videoplayback\?|initplayback\?)).+&oad(?:[=&]|$) _ reject-200
 
 [Script]
-# 上游响应脚本：固定版本
-youtube.clean.response = type=http-response,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/(?:browse|next|player|search|reel/reel_watch_sequence|guide|account/get_setting|get_watch)(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.response.js,argument="{"captionLang":"{{{字幕翻译语言}}}","blockUpload":{{{屏蔽上传按钮}}},"blockImmersive":{{{屏蔽选段按钮}}},"blockShorts":{{{屏蔽Shorts按钮}}},"debug":{{{启用调试模式}}}}"
+# browse/next/search/Shorts/player：去广告及 PIP/后台播放；config/log_event：存储 UMP 配置。
+youtube.clean.response = type=http-response,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/(?:browse|next|player|search|reel/reel_watch_sequence|guide|account/get_setting|get_watch|log_event|config)(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.response.js,argument="{"captionLang":"{{{字幕翻译语言}}}","blockUpload":{{{屏蔽上传按钮}}},"blockImmersive":{{{屏蔽选段按钮}}},"blockShorts":{{{屏蔽Shorts按钮}}},"debug":{{{启用调试模式}}}}"
+
+# Onesie/UMP 加密播放请求：上游可根据密钥状态重定向到第三方 Worker。
+youtube.clean.request.init = type=http-request,pattern=^https?://[\w-]+\.googlevideo\.com/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js,argument="{"captionLang":"{{{字幕翻译语言}}}"}"
+# 同步/清理加密播放链路相关请求头。
+youtube.clean.request.log_event = type=http-request,pattern=^https://youtubei\.googleapis\.com/youtubei/v1/log_event(?:[?#]|$),requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/65075cdb388fc5e3094afd7e7314c67b243f3525/Script/Youtube/youtube.request.js
 
 [MITM]
-# YouTube HTTPS 解密域名
-hostname = %APPEND% -redirector*.googlevideo.com, *.googlevideo.com, s.youtube.com, www.youtube.com, youtubei.googleapis.com
+hostname = %APPEND% -redirector*.googlevideo.com, *.googlevideo.com, youtubei.googleapis.com, www.youtube.com, s.youtube.com
