@@ -1,14 +1,14 @@
 #!name=YouTube Enhance
-#!desc=YouTube / YouTube Music 去广告与后台播放；UMP Worker 可选
+#!desc=YouTube / YouTube Music 去广告与后台播放；附加功能和 UMP Worker 可配置
 #!author=Based on Maasea/sgmodule and community Shadowrocket rules
 #!homepage=https://github.com/Maasea/sgmodule
-#!version=2026.11.18.3
-#!arguments=EnableUMPWorker:true
-#!arguments-desc=EnableUMPWorker: true 启用新式 UMP/Onesie 请求处理（可能经第三方 Worker）；false 停用这两条请求脚本，保留其他去广告功能。
+#!version=2026.11.18.4
+#!arguments=EnableUMPWorker:true,BlockUpload:false,BlockImmersive:false,BlockShorts:false,CaptionLang:off,Debug:false
+#!arguments-desc=EnableUMPWorker: true 开启 UMP/Onesie Worker 请求处理，false 关闭；\nBlockUpload: true 隐藏上传按钮，false 保留；\nBlockImmersive: true 隐藏选段/沉浸式入口，false 保留；\nBlockShorts: true 隐藏 Shorts 入口，false 保留；\nCaptionLang: off 关闭字幕翻译，改为 zh-Hans、en 等语言代码可启用；\nDebug: true 开启脚本调试日志，false 关闭。
 
 # --- Module ---
 # name/desc：模块显示名和功能摘要；author/homepage：脚本来源及项目地址。
-# version：本模块配置版本；arguments/arguments-desc：可编辑的开关及其说明。
+# version：本模块配置版本；arguments/arguments-desc：可编辑的功能参数及默认值。
 # 使用要求：启用 HTTPS 解密并信任本机 CA；不要叠加其他 YouTube 响应修改模块。
 
 [Rule]
@@ -36,14 +36,14 @@ AND,((DOMAIN,youtubei.googleapis.com),(PROTOCOL,UDP)),REJECT
 # --- Response ---
 # youtube.response：type=http-response 处理所列 API 的 Protobuf 响应；pattern 限定接口。
 # requires-body=1 读取正文；max-size=-1 不限制正文大小；binary-body-mode=1 使用二进制。
-# script-path 追踪 Maasea master；argument 关闭字幕翻译、隐藏按钮及调试等附加功能。
-youtube.response = type=http-response,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.response.js,argument="{"captionLang":"off","blockUpload":false,"blockImmersive":false,"blockShorts":false,"debug":false}"
+# script-path 追踪 Maasea master；argument 传入 CaptionLang、BlockUpload、BlockImmersive、BlockShorts 和 Debug 的选择值。
+youtube.response = type=http-response,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.response.js,argument="{"captionLang":"{{{CaptionLang}}}","blockUpload":{{{BlockUpload}}},"blockImmersive":{{{BlockImmersive}}},"blockShorts":{{{BlockShorts}}},"debug":{{{Debug}}}}"
 
 # --- UMP / Onesie Requests ---
 # youtube.request.init：type=http-request 处理 initplayback 的加密请求；pattern 限定匹配路径。
 # requires-body/max-size/binary-body-mode 同上；script-path 使用 Maasea master 请求脚本。
-# argument 关闭字幕翻译；enable 从 EnableUMPWorker 获取开关值，不与旧 Map Local 混用。
-youtube.request.init = type=http-request,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.request.js,argument="{"captionLang":"off"}",enable={{{EnableUMPWorker}}}
+# argument 共用 CaptionLang 翻译语言设置；enable 从 EnableUMPWorker 获取开关值，不与旧 Map Local 混用。
+youtube.request.init = type=http-request,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.request.js,argument="{"captionLang":"{{{CaptionLang}}}"}",enable={{{EnableUMPWorker}}}
 # youtube.request.log_event：处理 API 日志请求以配合 UMP 密钥缓存，不拦截日志 URL。
 # type/pattern 指明请求与路径；requires-body/max-size/binary-body-mode 设置正文处理方式。
 # script-path 指向相同请求脚本；enable 与 initplayback 共用 EnableUMPWorker 开关。
