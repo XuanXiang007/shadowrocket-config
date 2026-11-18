@@ -46,3 +46,9 @@
 | `FINAL,PROXY` | 最后兜底；未命中的流量代理。 |
 
 `DOMAIN-SET` 用于域名清单，`RULE-SET` 用于规则清单；`DIRECT` 表示直连，`PROXY` 由 Shadowrocket 当前代理策略负责。先匹配的规则优先执行。
+
+### URL Rewrite 与 MITM
+
+主配置新增 Google 中国域名重定向：`g.cn` 和 `google.cn`（含 `www`）的 HTTP(S) URL 按 302 跳转到 `https://www.google.com`，保留原路径及查询参数。
+
+`[MITM]` 仅列出这四个域名。HTTPS URL Rewrite 需要在 Shadowrocket 中启用 HTTPS 解密，并安装、信任其 CA 证书；**仅有主配置并不能保证 HTTPS 重定向生效**。这些主机名以外的 HTTPS 域名不因这项配置而被加入解密列表。
